@@ -6,10 +6,15 @@ __author__ = 'Will Brennan'
 import os
 import argparse
 import logging
+import random
 
 import cv2
+import sys
 
-import image_stitching
+sys.path.append("image_stitching")
+from combine import *
+from helpers import *
+from matching import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
@@ -18,10 +23,10 @@ if __name__ == '__main__':
     parser.add_argument('-q', '--quiet', dest='quiet', action='store_true', help='disable all logging')
     parser.add_argument('-d', '--display', dest='display', action='store_true', help="display result")
     parser.add_argument('-s', '--save', dest='save', action='store_true', help="save result to file")
-    parser.add_argument("--save_path", dest='save_path', default="stitched.png", type=str, help="path to save result")
+    parser.add_argument("--save_path", dest='save_path', default="KA0.png", type=str, help="path to save result")
     parser.add_argument('-k', '--knn', dest='knn', default=2, type=int, help="Knn cluster value")
     parser.add_argument('-l', '--lowe', dest='lowe', default=0.7, type=float, help='acceptable distance between points')
-    parser.add_argument('-m', '--min', dest='min_correspondence', default=10, type=int, help='min correspondences')
+    parser.add_argument('-m', '--min', dest='min_correspondence', default=200, type=int, help='min correspondences')
     args = parser.parse_args()
 
     if args.debug:
@@ -32,12 +37,12 @@ if __name__ == '__main__':
 
     logging.info("beginning sequential matching")
 
-    if image_stitching.helpers.is_cv2():
+    if is_cv2():
         sift = cv2.SIFT()
-    elif image_stitching.helpers.is_cv3():
+    elif is_cv3() or is_cv4():
         sift = cv2.xfeatures2d.SIFT_create()
     else:
-        raise RuntimeError("error! unknown version of python!")
+        raise RuntimeError("error! unknown version of opencv!")
 
     result = None
     result_gry = None
@@ -52,7 +57,8 @@ if __name__ == '__main__':
             continue
         if os.path.isdir(image_path):
             extensions = [".jpeg", ".jpg", ".png"]
-            for file_path in os.listdir(image_path):
+            #for file_path in random.sample(os.listdir(image_path), len(os.listdir(image_path))):
+            for file_path in sorted(os.listdir(image_path)):
                 if os.path.splitext(file_path)[1].lower() in extensions:
                     image_paths.append(os.path.join(image_path, file_path))
             continue
@@ -72,18 +78,18 @@ if __name__ == '__main__':
         features0 = sift.detectAndCompute(result_gry, None)
         features1 = sift.detectAndCompute(image_gray, None)
 
-        matches_src, matches_dst, n_matches = image_stitching.compute_matches(features0, features1, flann, knn=args.knn)
+        matches_src, matches_dst, n_matches = compute_matches(features0, features1, flann, knn=args.knn)
 
         if n_matches < args.min_correspondence:
             logger.error("error! too few correspondences")
             continue
 
         logger.debug("computing homography between accumulated and new images")
-        H, mask = cv2.findHomography(matches_src, matches_dst, cv2.RANSAC, 5.0)
-        result = image_stitching.combine_images(image_colour, result, H)
+        H, mask = cv2.findHomography(matches_src, matches_dst, cv2.RANSAC, 1.0)
+        result = combine_images(image_colour, result, H)
 
         if args.display and not args.quiet:
-            image_stitching.helpers.display('result', result)
+            display('result', result)
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 break
 
@@ -94,5 +100,5 @@ if __name__ == '__main__':
     if args.display and not args.quiet:
         cv2.destroyAllWindows()
     if args.save:
-        logger.info("saving stitched image to {0}".format(args.save_path))
-        image_stitching.helpers.save_image(args.save_path, result)
+        logger.info(f"saving stitched image to {args.image_paths[0]}/{args.save_path}")
+        save_image(f"{args.image_paths[0]}/{args.save_path}".replace(".png", str(random.randint(0,10000))), result)

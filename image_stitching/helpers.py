@@ -14,11 +14,13 @@ def is_cv2():
     major, minor, increment = cv2.__version__.split(".")
     return major == "2"
 
-
 def is_cv3():
     major, minor, increment = cv2.__version__.split(".")
     return major == "3"
 
+def is_cv4():
+    major, minor, increment = cv2.__version__.split(".")
+    return major == "4"
 
 def display(title, img, max_size=500000):
     assert isinstance(img, numpy.ndarray), 'img must be a numpy array'

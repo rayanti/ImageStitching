@@ -27,5 +27,8 @@ def combine_images(img0, img1, h_matrix):
     H_translation = numpy.array([[1, 0, -x_min], [0, 1, -y_min], [0, 0, 1]])
     logger.debug('warping previous image...')
     output_img = cv2.warpPerspective(img1, H_translation.dot(h_matrix), (x_max - x_min, y_max - y_min))
+    if numpy.abs(output_img.shape[0]-img0.shape[0]) < 50 and numpy.abs(output_img.shape[1]-img0.shape[1]) < 50: # fail
+        logger.error("failed in warp perspective")
+        return img1
     output_img[-y_min:img0.shape[0] - y_min, -x_min:img0.shape[1] - x_min] = img0
     return output_img

@@ -20,10 +20,12 @@ def compute_matches(features0, features1, matcher, knn=5, lowe=0.7):
 
     logger.debug("filtering matches with lowe test")
 
-    positive = []
-    for match0, match1 in matches:
-        if match0.distance < lowe * match1.distance:
-            positive.append(match0)
+    #positive = []
+    positive = sorted(matches, key = lambda x : x[1].distance)
+    positive = [match[0] for match in positive]
+    #for match0, match1 in matches:
+    #    if match0.distance < lowe * match1.distance:
+    #        positive.append(match0)
 
     src_pts = numpy.array([keypoints0[good_match.queryIdx].pt for good_match in positive], dtype=numpy.float32)
     src_pts = src_pts.reshape((-1, 1, 2))
